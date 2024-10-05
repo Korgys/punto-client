@@ -8,7 +8,7 @@ public class GestionnaireJeuLocal
     private Jeu Jeu;
     public Jeu ObtenirJeu() => Jeu;
     public EtatJeu ObtenirEtatJeu() => Jeu.EtatJeu;
-    public void CreerNouveauJeu() => Jeu = new Jeu();
+    public void CreerNouveauJeu(int nombreJoueurs) => Jeu = new Jeu(nombreJoueurs);
     public Joueur ObtenirJoueurDevantJouer() => Jeu.AuTourDuJoueur;
     public Plateau ObtenirPlateau() => Jeu.Plateau;
 
@@ -16,7 +16,8 @@ public class GestionnaireJeuLocal
     /// Ajoute un joueur à la partie (si c'est possible).
     /// </summary>
     /// <param name="numero"></param>
-    public void AjouterUnJoueur(int numero)
+    /// <param name="ordinateur"></param>
+    public void AjouterUnJoueur(int numero, bool ordinateur = false)
     {
         // On ajoute pas des joueurs si la partie n'est pas en attente de joueur
         if (Jeu.EtatJeu != EtatJeu.EnAttenteDeJoueur)
@@ -28,15 +29,21 @@ public class GestionnaireJeuLocal
         // et le nombre de joueurs max n'est pas atteint.
         // On peut alors ajouter un joueur.
 
-        // Création du joueur et de sa pioche
-        AfficherMessageDeJoueur(numero, $"Joueur {numero}, entrez votre pseudo : ");
-        string nomJoueur = Console.ReadLine();
-        var pioche = CreerTuilesPourJoueur();
+        // Création du joueur et de sa pioche ou de l'ordinateur
+        var message = ordinateur
+            ? $"Création de l'ordinateur CPU {numero}.\n"
+            : $"Joueur {numero}, entrez votre pseudo : ";
+        AfficherMessageDeJoueur(numero, message);
+        string nomJoueur = ordinateur
+            ? $"CPU {numero}"
+            : Console.ReadLine();
+
         var joueur = new Joueur
         {
             Nom = nomJoueur,
+            EstUnOrdinateur = ordinateur,
             OrdreDeJeu = Jeu.Joueurs.Count + 1, // nombre de joueurs + 1
-            TuilesDansLaPioche = pioche,
+            TuilesDansLaPioche = CreerTuilesPourJoueur(),
             TuilesDansLaMain = new List<int>()
         };
 
@@ -65,7 +72,7 @@ public class GestionnaireJeuLocal
         if (Jeu.Joueurs.Count == Jeu.NombreMaxDeJoueurs && Jeu.EtatJeu == EtatJeu.EnAttenteDeJoueur)
         {
             Jeu.EtatJeu = EtatJeu.EnCours;
-            Jeu.AuTourDuJoueur = joueur;
+            Jeu.AuTourDuJoueur = Jeu.Joueurs[1]; // 2e joueur
             AfficherMessageDeJoueur(Jeu.AuTourDuJoueur.OrdreDeJeu, $"C'est au tour de {Jeu.AuTourDuJoueur.Nom} de jouer.\n");
         }
     }
@@ -91,7 +98,7 @@ public class GestionnaireJeuLocal
         // Remplit la grille avec les tuiles placées (sans affichage de couleur ici)
         foreach (var tuile in tuilesPlacees)
         {
-            if (tuile.PositionX >= -6 && tuile.PositionX < 6 && tuile.PositionY >= -6 && tuile.PositionY < 6)
+            if (tuile.PositionX > -6 && tuile.PositionX < 6 && tuile.PositionY > -6 && tuile.PositionY < 6)
             {
                 grille[tuile.PositionY + 5, tuile.PositionX + 5] = tuile.Valeur.ToString();
             }
@@ -129,6 +136,37 @@ public class GestionnaireJeuLocal
         Console.ResetColor(); 
     }
 
+    /// <summary>
+    /// Permet d'ajouter des ordinateurs à la partie.
+    /// </summary>
+    /// <returns></returns>
+    public List<IGestionnaireStrategie> DefinirIA()
+    {
+        var strategies = new List<IGestionnaireStrategie>();
+
+        // Choix du nombre d'IA
+        int maxCpu = Jeu.NombreMaxDeJoueurs - Jeu.Joueurs.Count;
+        Console.Write($"Précisez le nombre de joueurs gérés par l'ordinateur (maximum {maxCpu}) : ");
+        int choix = -1;
+        do
+        {
+            int.TryParse(Console.ReadLine(), out choix);
+        } while (choix < 0 && choix >= maxCpu);
+
+        for (int i = 0; i < choix; i++)
+        {
+            AjouterUnJoueur(i+1, true); // Ajoute un ordinateur
+            strategies.Add(new GestionnaireStrategieAleatoire()); // Définit la stratégie utilisée
+        }
+
+        return strategies;
+    }
+
+    /// <summary>
+    /// Place une tuile sur le plateau si c'est possible.
+    /// Si la tuile est placée et ne déclenche pas la fin du jeu, le jeu passe au joueur suivant.
+    /// </summary>
+    /// <param name="tuile"></param>
     public void PlacerTuile(Tuile tuile)
     {
         // Vérifie si c'est le tour du joueur actuel et si la tuile peut être placée
@@ -137,7 +175,26 @@ public class GestionnaireJeuLocal
             && joueur != null                                                   // Joueur dans la partie
             && !GestionnaireRegles.PeutPlacerTuile(Jeu.Plateau, joueur, tuile)) // Règles du jeu
         {
-            Console.WriteLine("La tuile ne peut pas être placée à cet emplacement.");
+            Console.WriteLine($"La tuile {tuile.Valeur} ne peut pas être placée en ({tuile.PositionX}, {tuile.PositionY}).");
+
+            // Gestion des penalités
+            joueur.Penalite++;
+            Console.WriteLine($"Le joueur {joueur.Nom} a reçu une pénalité ({joueur.Penalite}/3).");
+            if (joueur.Penalite >= 3) // Disqualifie le joueur après 3 pénalités
+            {
+                Console.WriteLine($"Le joueur {joueur.Nom} a été disqualifié.");
+                Jeu.Joueurs.Remove(joueur);
+                if (Jeu.Joueurs.Count == 1) // Il reste un seul joueur : il est désigné comme vainqueur
+                {
+                    Jeu.EtatJeu = EtatJeu.Termine;
+                    Console.WriteLine($"{Jeu.Joueurs.Last().Nom} a gagné la partie !");
+                    return;
+                }
+                else
+                {
+                    PasserAuJoueurSuivant();
+                }
+            }
             return;
         }
 
@@ -169,6 +226,9 @@ public class GestionnaireJeuLocal
         PasserAuJoueurSuivant();
     }
 
+    /// <summary>
+    /// Permet de passer au tour du joueur suivant.
+    /// </summary>
     private void PasserAuJoueurSuivant()
     {
         var indexJoueurActuel = Jeu.Joueurs.IndexOf(Jeu.AuTourDuJoueur);
@@ -276,6 +336,11 @@ public class GestionnaireJeuLocal
         return count >= 4;
     }
 
+    /// <summary>
+    /// Permet de créer les tuiles dans la pioche du joueur. 
+    /// Les tuiles sont mélangées au hasard.
+    /// </summary>
+    /// <returns></returns>
     private static List<int> CreerTuilesPourJoueur()
     {
         // Mélange des tuiles
@@ -293,10 +358,14 @@ public class GestionnaireJeuLocal
         };
 
         // Mélange des tuiles pour plus d'aléatoire
-        var random = new Random();
-        return tuiles.OrderBy(t => random.Next()).ToList();
+        var aleatoire = new Random();
+        return tuiles.OrderBy(t => aleatoire.Next()).ToList();
     }
 
+    /// <summary>
+    /// Pioche la première tuile de la pioche du joueur.
+    /// </summary>
+    /// <param name="joueur"></param>
     private static void PiocherTuile(Joueur joueur)
     {
         // Ne fais rien si le joueur n'a plus de tuile

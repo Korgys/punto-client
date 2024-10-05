@@ -2,8 +2,13 @@
 
 public class Jeu
 {
+    public Jeu (int nombreJoueurs)
+    {
+        NombreMaxDeJoueurs = nombreJoueurs;
+    }
+
     public EtatJeu EtatJeu { get; set; } = EtatJeu.EnAttenteDeJoueur;
-    public int NombreMaxDeJoueurs { get; } = 2; // joueurs max
+    public int NombreMaxDeJoueurs { get; } // joueurs max
     public Joueur AuTourDuJoueur { get; set; }
     public Joueur Vainqueur { get; set; }
     public Plateau Plateau { get; set; } = new Plateau();

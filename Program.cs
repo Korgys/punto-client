@@ -4,6 +4,8 @@ using punto_client.Strategie;
 
 public class Program
 {
+    private static List<IGestionnaireStrategie> _strategiesIA = new List<IGestionnaireStrategie>(); 
+
     public static async Task Main(string[] args)
     {
         // Si le programme est lancé avec un argument
@@ -35,8 +37,18 @@ public class Program
     {
         GestionnaireJeuLocal gestionnaireJeu = new GestionnaireJeuLocal();
 
+        int nombreJoueurs = -1;
+        do
+        {
+            Console.Write("Nombre de joueurs : ");
+            int.TryParse(Console.ReadLine(), out nombreJoueurs);
+        } while (nombreJoueurs < 2 && 4 < nombreJoueurs);
+
         // Crée une nouvelle partie
-        gestionnaireJeu.CreerNouveauJeu();
+        gestionnaireJeu.CreerNouveauJeu(nombreJoueurs);
+
+        // Gère les joueurs contrôlés par l'ordinateur
+        _strategiesIA = gestionnaireJeu.DefinirIA();
 
         // Ajoute des joueurs tant que le lobby n'est pas plein
         int compteurJoueur = 1;
@@ -59,22 +71,25 @@ public class Program
             // Change la couleur en fonction du joueur
             GestionnaireJeuLocal.AfficherMessageDeJoueur(joueur.OrdreDeJeu, $"Tuiles : [{string.Join(',', joueur.TuilesDansLaMain)}]");
 
-            // Récupère le prochain coup du joueur
-            var tuile = GestionnaireStrategieJoueurManuel.ObtenirProchainCoup(
-                gestionnaireJeu.ObtenirPlateau(),
-                joueur);
+            // En fonction du type de joueur
+            Tuile tuile = null;
+            if (joueur.EstUnOrdinateur) // Ordinateur
+            {
+                // Récupère le prochain coup de l'ordinateur
+                tuile = _strategiesIA[joueur.OrdreDeJeu-1].ObtenirProchainCoup(
+                    gestionnaireJeu.ObtenirPlateau(), 
+                    joueur);
+            }
+            else // Joueur
+            {
+                // Récupère le prochain coup du joueur
+                tuile = GestionnaireStrategieJoueurManuel.ObtenirProchainCoup(
+                    gestionnaireJeu.ObtenirPlateau(),
+                    joueur);
+            }
 
-            // Si le joueur peut placer sa tuile
-            Plateau plateau = gestionnaireJeu.ObtenirPlateau();
-            if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, tuile))
-            {
-                // On place la tuile et on passe au joueur suivant
-                gestionnaireJeu.PlacerTuile(tuile);
-            }
-            else
-            {
-                Console.WriteLine("La tuile ne peut pas être placée à cet emplacement.");
-            }
+            // Essaie de placer la tuile et passe au joueur suivant
+            gestionnaireJeu.PlacerTuile(tuile);
 
             // Fin de l'itération, on passe automatiquement au tour suivant
         }
