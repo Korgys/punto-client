@@ -1,4 +1,5 @@
 ﻿using punto_client.Models;
+using punto_client.Strategie;
 
 namespace punto_client.Services;
 
@@ -128,56 +129,13 @@ public class GestionnaireJeuLocal
         Console.ResetColor(); 
     }
 
-    public bool PeutPlacerTuile(Joueur joueur, Tuile tuile)
-    {
-        // Récupérer les positions des tuiles déjà placées
-        var tuilesPlacees = Jeu.Plateau.TuilesPlacees;
-
-        // Déterminer les bornes dynamiques de la grille (min et max X et Y)
-        int minX = tuilesPlacees.Min(t => t.PositionX);
-        int maxX = tuilesPlacees.Max(t => t.PositionX);
-        int minY = tuilesPlacees.Min(t => t.PositionY);
-        int maxY = tuilesPlacees.Max(t => t.PositionY);
-
-        // Calculer la taille actuelle de la grille
-        int largeurGrille = maxX - minX + 1;
-        int hauteurGrille = maxY - minY + 1;
-
-        // Vérifier que la tuile peut être placée dans une grille 6x6
-        bool estDansLaGrille = (largeurGrille <= 6 && hauteurGrille <= 6)
-            && tuile.PositionX >= minX - 1 && tuile.PositionX <= maxX + 1
-            && tuile.PositionY >= minY - 1 && tuile.PositionY <= maxY + 1;
-
-        // Vérifier si la tuile est adjacente à une tuile existante
-        bool estAdjacent = tuilesPlacees.Any(t =>
-            Math.Abs(t.PositionX - tuile.PositionX) <= 1 &&
-            Math.Abs(t.PositionY - tuile.PositionY) <= 1);
-
-        // Vérifier s'il existe déjà une tuile à cet emplacement
-        Tuile tuileExistante = tuilesPlacees
-            .FirstOrDefault(t => t.PositionX == tuile.PositionX && t.PositionY == tuile.PositionY);
-
-        // Vérifier si la tuile placée est plus forte que celle existante (ou s'il n'y a pas de tuile)
-        bool estPlusForteSiPoseeSurTuileExistante = tuileExistante == null || tuileExistante.Valeur < tuile.Valeur;
-
-        // Vérifier si toutes les conditions de placement sont remplies
-        var coupAutorise = Jeu.EtatJeu == EtatJeu.EnCours           // Partie en cours
-            && joueur != null                                       // Etre un joueur de la partie
-            && joueur.OrdreDeJeu == Jeu.AuTourDuJoueur.OrdreDeJeu   // Etre le joueur à qui c'est le tour de jouer
-            && joueur.TuilesDansLaMain.Contains(tuile.Valeur)       // Jouer une tuile de sa main
-            && estAdjacent                                          // La tuile doit être adjacente à une tuile existante
-            && estPlusForteSiPoseeSurTuileExistante                 // La tuile doit être plus puissante si posée sur une tuile existante
-            && 1 <= tuile.Valeur && tuile.Valeur <= 9               // La valeur de la tuile doit être comprise entre 1 et 9
-            && estDansLaGrille;                                     // La tuile doit être placée dans une grille 6x6
-
-        return coupAutorise;
-    }
-
     public void PlacerTuile(Tuile tuile)
     {
         // Vérifie si c'est le tour du joueur actuel et si la tuile peut être placée
         var joueur = Jeu.AuTourDuJoueur;
-        if (!PeutPlacerTuile(joueur, tuile))
+        if (Jeu.EtatJeu == EtatJeu.EnCours                                      // Partie en cours
+            && joueur != null                                                   // Joueur dans la partie
+            && !GestionnaireRegles.PeutPlacerTuile(Jeu.Plateau, joueur, tuile)) // Règles du jeu
         {
             Console.WriteLine("La tuile ne peut pas être placée à cet emplacement.");
             return;

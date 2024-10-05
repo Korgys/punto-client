@@ -1,6 +1,6 @@
-﻿using punto_client.IA;
-using punto_client.Models;
+﻿using punto_client.Models;
 using punto_client.Services;
+using punto_client.Strategie;
 
 public class Program
 {
@@ -65,7 +65,8 @@ public class Program
                 joueur);
 
             // Si le joueur peut placer sa tuile
-            if (gestionnaireJeu.PeutPlacerTuile(joueur, tuile))
+            Plateau plateau = gestionnaireJeu.ObtenirPlateau();
+            if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, tuile))
             {
                 // On place la tuile et on passe au joueur suivant
                 gestionnaireJeu.PlacerTuile(tuile);
