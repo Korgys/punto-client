@@ -1,4 +1,5 @@
 ﻿using punto_client.Models;
+using System.Linq;
 
 namespace punto_client.IA;
 
@@ -16,13 +17,18 @@ public class GestionnaireStrategieJoueurManuel
     public static Tuile ObtenirProchainCoup(Plateau plateau, Joueur joueur)
     {
         // Demande à l'utilisateur de renseigner la valeur et les positions de la tuile
-        Console.Write("\nQuelle tuile voulez-vous jouer ? ");
-        var valeurTuile = int.Parse(Console.ReadLine());
+        int valeurTuile;
+        Console.WriteLine();
+        do
+        {
+            Console.Write("Quelle tuile voulez-vous jouer ? ");
+            valeurTuile = int.Parse(Console.ReadLine());
+        } while (!joueur.TuilesDansLaMain.Contains(valeurTuile)); // Boucle tant que le joueur ne sélectionne pas une tuile de sa main
 
-        Console.Write("\nEn quelle position X ? ");
+        Console.Write("En quelle position X ? ");
         var positionX = int.Parse(Console.ReadLine());
 
-        Console.Write("\nEn quelle position Y ? ");
+        Console.Write("En quelle position Y ? ");
         var positionY = int.Parse(Console.ReadLine());
 
         return new Tuile
