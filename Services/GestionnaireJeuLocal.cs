@@ -139,21 +139,24 @@ public class GestionnaireJeuLocal
     /// <summary>
     /// Permet d'ajouter des ordinateurs à la partie.
     /// </summary>
+    /// <param name="nombreDeCPU"></param>
     /// <returns></returns>
-    public List<IGestionnaireStrategie> DefinirIA()
+    public List<IGestionnaireStrategie> DefinirIA(int nombreDeCPU = -1)
     {
         var strategies = new List<IGestionnaireStrategie>();
 
         // Choix du nombre d'IA
         int maxCpu = Jeu.NombreMaxDeJoueurs - Jeu.Joueurs.Count;
-        Console.Write($"Précisez le nombre de joueurs gérés par l'ordinateur (maximum {maxCpu}) : ");
-        int choix = -1;
-        do
+        if (nombreDeCPU == -1)
         {
-            int.TryParse(Console.ReadLine(), out choix);
-        } while (choix < 0 && choix >= maxCpu);
+            Console.Write($"Précisez le nombre de joueurs gérés par l'ordinateur (maximum {maxCpu}) : ");
+            do
+            {
+                int.TryParse(Console.ReadLine(), out nombreDeCPU);
+            } while (nombreDeCPU < 0 && nombreDeCPU >= maxCpu);
+        }
 
-        for (int i = 0; i < choix; i++)
+        for (int i = 0; i < nombreDeCPU; i++)
         {
             AjouterUnJoueur(i+1, true); // Ajoute un ordinateur
             strategies.Add(new GestionnaireStrategieAleatoire()); // Définit la stratégie utilisée
@@ -187,7 +190,8 @@ public class GestionnaireJeuLocal
                 if (Jeu.Joueurs.Count == 1) // Il reste un seul joueur : il est désigné comme vainqueur
                 {
                     Jeu.EtatJeu = EtatJeu.Termine;
-                    Console.WriteLine($"{Jeu.Joueurs.Last().Nom} a gagné la partie !");
+                    Jeu.Vainqueur = Jeu.Joueurs.Last();
+                    Console.WriteLine($"{Jeu.Vainqueur.Nom} a gagné la partie !");
                     return;
                 }
                 else
@@ -218,6 +222,7 @@ public class GestionnaireJeuLocal
         if (VerifierConditionsVictoire(joueur))
         {
             Jeu.EtatJeu = EtatJeu.Termine;
+            Jeu.Vainqueur = joueur;
             Console.WriteLine($"{joueur.Nom} a gagné la partie !");
             return;
         }
@@ -236,6 +241,19 @@ public class GestionnaireJeuLocal
         Jeu.AuTourDuJoueur = Jeu.Joueurs[indexJoueurSuivant];
 
         AfficherMessageDeJoueur(Jeu.AuTourDuJoueur.OrdreDeJeu, $"C'est au tour de {Jeu.AuTourDuJoueur.Nom} de jouer.\n");
+
+        // Cas où le joueur n'a plus de tuiles
+        if (Jeu.AuTourDuJoueur.TuilesDansLaMain.Count == 0)
+        {
+            Console.WriteLine("Le joueur n'a plus de tuile. Fin de la partie.");
+            Jeu.EtatJeu = EtatJeu.Termine;
+
+            // Désigne le vainqueur en prenant le 1er joueur au hasard ayant réussi à aligner 3 tuiles.
+            var aleatoire = new Random();
+            Jeu.Vainqueur = Jeu.Joueurs
+                .OrderBy(j => aleatoire.Next())
+                .FirstOrDefault(j => VerifierConditionsVictoire(j, 3));
+        }
     }
 
     /// <summary>
@@ -243,7 +261,7 @@ public class GestionnaireJeuLocal
     /// </summary>
     /// <param name="joueur"></param>
     /// <returns></returns>
-    public bool VerifierConditionsVictoire(Joueur joueur)
+    public bool VerifierConditionsVictoire(Joueur joueur, int tuilesAligneesPourGagner = 4)
     {
         // Récupère les tuiles du joueur
         var tuilesJoueur = Jeu.Plateau.TuilesPlacees
@@ -254,16 +272,16 @@ public class GestionnaireJeuLocal
         foreach (var tuile in tuilesJoueur)
         {
             // Vérification horizontale
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 0)) return true;
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 0, tuilesAligneesPourGagner)) return true;
 
             // Vérification verticale
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 0, 1)) return true;
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 0, 1, tuilesAligneesPourGagner)) return true;
 
             // Vérification diagonale gauche-droite (bas-droite)
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 1)) return true;
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 1, tuilesAligneesPourGagner)) return true;
 
             // Vérification diagonale droite-gauche (bas-gauche)
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, -1)) return true;
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, -1, tuilesAligneesPourGagner)) return true;
         }
 
         return false; // Aucun alignement trouvé
@@ -296,12 +314,12 @@ public class GestionnaireJeuLocal
     /// <param name="deltaX"></param>
     /// <param name="deltaY"></param>
     /// <returns></returns>
-    private static bool VerifierAlignementDirection(List<Tuile> tuilesJoueur, Tuile tuile, int deltaX, int deltaY)
+    private static bool VerifierAlignementDirection(List<Tuile> tuilesJoueur, Tuile tuile, int deltaX, int deltaY, int tuilesAligneesPourGagner = 4)
     {
         int count = 1; // Compte la tuile actuelle
 
         // Vérifie dans la direction positive (droite/bas)
-        for (int i = 1; i < 4; i++)
+        for (int i = 1; i < tuilesAligneesPourGagner; i++)
         {
             var tuileSuivante = tuilesJoueur.FirstOrDefault(t =>
                 t.PositionX == tuile.PositionX + i * deltaX &&
@@ -317,7 +335,7 @@ public class GestionnaireJeuLocal
         }
 
         // Vérifie dans la direction négative (gauche/haut)
-        for (int i = 1; i < 4; i++)
+        for (int i = 1; i < tuilesAligneesPourGagner; i++)
         {
             var tuilePrecedente = tuilesJoueur.FirstOrDefault(t =>
                 t.PositionX == tuile.PositionX - i * deltaX &&
@@ -333,7 +351,7 @@ public class GestionnaireJeuLocal
         }
 
         // Si on a trouvé 4 tuiles alignées
-        return count >= 4;
+        return count >= tuilesAligneesPourGagner;
     }
 
     /// <summary>
