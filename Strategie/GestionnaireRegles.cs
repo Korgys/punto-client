@@ -167,4 +167,98 @@ public class GestionnaireRegles
         // Si on a trouvé 4 tuiles alignées
         return count >= tuilesAligneesPourGagner;
     }
+
+    /// <summary>
+    /// Génère tous les coups possibles pour un joueur en fonction du plateau actuel.
+    /// </summary>
+    public static List<Tuile> ObtenirTousLesCoupsPossibles(Plateau plateau, Joueur joueur)
+    {
+        var coupsPossibles = new List<Tuile>();
+
+        foreach (int valeurTuile in joueur.TuilesDansLaMain)
+        {
+            var tuile = new Tuile { Proprietaire = joueur, Valeur = valeurTuile };
+
+            var positionsPossibles = ObtenirPositionsPossibles(plateau, tuile);
+
+            foreach (var position in positionsPossibles)
+            {
+                var coup = new Tuile
+                {
+                    Proprietaire = joueur,
+                    Valeur = valeurTuile,
+                    PositionX = position.X,
+                    PositionY = position.Y
+                };
+
+                if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, coup))
+                {
+                    coupsPossibles.Add(coup);
+                }
+            }
+        }
+
+        return coupsPossibles;
+    }
+
+    /// <summary>
+    /// Obtenir les positions possibles pour une tuile donnée (méthode déjà existante).
+    /// </summary>
+    public static List<Position> ObtenirPositionsPossibles(Plateau plateau, Tuile tuile)
+    {
+        var positionsPossibles = new List<Position>();
+
+        // Détermine les bornes dynamiques de la grille (min et max X et Y)
+        int minX = plateau.TuilesPlacees.Min(t => t.PositionX);
+        int maxX = plateau.TuilesPlacees.Max(t => t.PositionX);
+        int minY = plateau.TuilesPlacees.Min(t => t.PositionY);
+        int maxY = plateau.TuilesPlacees.Max(t => t.PositionY);
+
+        // Positions déjà jouées par l'adversaire avec une tuile plus faible
+        positionsPossibles.AddRange(
+            plateau.TuilesPlacees
+                .Where(t => t.Proprietaire.Nom != tuile.Proprietaire.Nom && t.Valeur < tuile.Valeur)
+                .Select(t => new Position(t)));
+
+        // Positions adjacentes à des tuiles jouées qui restent dans la grille
+        foreach (var t in plateau.TuilesPlacees)
+        {
+            var positionsAdjacentes = new List<Position>
+            {
+                new Position(t.PositionX - 1, t.PositionY),     // Gauche
+                new Position(t.PositionX + 1, t.PositionY),     // Droite
+                new Position(t.PositionX, t.PositionY - 1),     // Haut
+                new Position(t.PositionX, t.PositionY + 1),     // Bas
+                new Position(t.PositionX - 1, t.PositionY - 1), // Diagonale haut-gauche
+                new Position(t.PositionX + 1, t.PositionY - 1), // Diagonale haut-droite
+                new Position(t.PositionX - 1, t.PositionY + 1), // Diagonale bas-gauche
+                new Position(t.PositionX + 1, t.PositionY + 1)  // Diagonale bas-droite
+            };
+
+            // Ajoute les positions adjacentes si elles sont dans la grille 6x6 et respectent les règles
+            foreach (var pos in positionsAdjacentes)
+            {
+                tuile.PositionX = pos.X;
+                tuile.PositionY = pos.Y;
+
+                if (GestionnaireRegles.PeutPlacerTuile(plateau, tuile.Proprietaire, tuile))
+                {
+                    positionsPossibles.Add(pos);
+                }
+            }
+        }
+
+        // Ne tiens pas compte de ses propres positions déjà couvertes
+        // Ainsi que des positions en double
+        positionsPossibles = positionsPossibles
+            .Where(p => !plateau.TuilesPlacees
+                .Any(t => t.Proprietaire == tuile.Proprietaire
+                    && t.PositionX == p.X && t.PositionY == p.Y))
+            .Distinct()
+            .OrderBy(p => p.X)
+            .ThenBy(p => p.Y)
+            .ToList();
+
+        return positionsPossibles;
+    }
 }

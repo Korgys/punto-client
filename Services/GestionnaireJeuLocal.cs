@@ -277,6 +277,12 @@ public class GestionnaireJeuLocal
             2 => ConsoleColor.Cyan,// Joueur 2 - Cyan
             3 => ConsoleColor.Green,// Joueur 3 - Vert
             4 => ConsoleColor.Yellow,// Joueur 4 - Jaune
+            5 => ConsoleColor.Gray,// Joueur 5 - Gris
+            6 => ConsoleColor.Red,// Joueur 6 - Rouge
+            7 => ConsoleColor.DarkYellow,// Joueur 7 - Jaune foncé
+            8 => ConsoleColor.DarkRed,// Joueur 8 - rouge foncé
+            9 => ConsoleColor.DarkGray,// Joueur 9 - gris foncé
+            10 => ConsoleColor.DarkCyan,// Joueur 10 - cyan foncé
             _ => ConsoleColor.White,// Autres joueurs ou cas par défaut
         };
         Console.Write(message);
