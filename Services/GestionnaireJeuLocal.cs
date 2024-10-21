@@ -166,7 +166,7 @@ public class GestionnaireJeuLocal
             for (int i = 0; i < nombreDeCPU; i++)
             {
                 AjouterUnJoueur(i + 1, true); // Ajoute un ordinateur
-                strategies[i] = new GestionnaireStrategieEpee(); // Définit la stratégie utilisée
+                strategies[i] = new GestionnaireStrategieAleatoire(); // Définit la stratégie utilisée
             }
         }
 
