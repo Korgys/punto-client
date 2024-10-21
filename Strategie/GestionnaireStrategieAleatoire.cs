@@ -2,6 +2,9 @@
 
 namespace punto_client.Strategie;
 
+/// <summary>
+/// Stratégie basée sur l'aléatoire parmis les coups possibles.
+/// </summary>
 public class GestionnaireStrategieAleatoire : IGestionnaireStrategie
 {
     /// <summary>
@@ -23,6 +26,34 @@ public class GestionnaireStrategieAleatoire : IGestionnaireStrategie
         };
 
         // Liste toutes les positions possibles
+        var positionsPossibles = ObtenirPositionsPossibles(plateau, tuile);
+
+        // Prends la première position jouable au hasard
+        positionsPossibles = positionsPossibles.OrderBy(p => aleatoire.Next()).ToList();
+        do
+        {
+            if (!positionsPossibles.Any()) break; // Si plus de positions disponibles, sortir de la boucle
+
+            var position = positionsPossibles.First();
+            positionsPossibles = positionsPossibles.Skip(1).ToList(); // Retire la position
+
+            tuile.PositionX = position.X;
+            tuile.PositionY = position.Y;
+        } while (!GestionnaireRegles.PeutPlacerTuile(plateau, joueur, tuile) && positionsPossibles.Any());
+
+        //Thread.Sleep(400); // Ralentit la prise de décision pour pouvoir voir le déroulement du jeu
+
+        return tuile;
+    }
+
+    /// <summary>
+    /// Liste toutes les positions possibles
+    /// </summary>
+    /// <param name="plateau"></param>
+    /// <param name="tuile"></param>
+    /// <returns></returns>
+    public List<Position> ObtenirPositionsPossibles(Plateau plateau, Tuile tuile)
+    {
         var positionsPossibles = new List<Position>();
 
         // Détermine les bornes dynamiques de la grille (min et max X et Y)
@@ -34,7 +65,7 @@ public class GestionnaireStrategieAleatoire : IGestionnaireStrategie
         // Positions déjà jouées par l'adversaire avec une tuile plus faible
         positionsPossibles.AddRange(
             plateau.TuilesPlacees
-                .Where(t => t.Proprietaire.Nom != joueur.Nom && t.Valeur < tuile.Valeur)
+                .Where(t => t.Proprietaire.Nom != tuile.Proprietaire.Nom && t.Valeur < tuile.Valeur)
                 .Select(t => new Position(t)));
 
         // Positions adjacentes à des tuiles jouées qui restent dans la grille
@@ -70,22 +101,6 @@ public class GestionnaireStrategieAleatoire : IGestionnaireStrategie
             }
         }
 
-        // Prends la première position jouable au hasard
-        positionsPossibles = positionsPossibles.OrderBy(p => aleatoire.Next()).ToList();
-        do
-        {
-            if (!positionsPossibles.Any()) break; // Si plus de positions disponibles, sortir de la boucle
-
-            var position = positionsPossibles.First();
-            positionsPossibles = positionsPossibles.Skip(1).ToList(); // Retire la position
-
-            tuile.PositionX = position.X;
-            tuile.PositionY = position.Y;
-        } while (!GestionnaireRegles.PeutPlacerTuile(plateau, joueur, tuile) && positionsPossibles.Any());
-
-        Thread.Sleep(400); // Ralentit la prise de décision pour pouvoir voir le déroulement du jeu
-        Console.WriteLine();
-
-        return tuile;
+        return positionsPossibles;
     }
 }

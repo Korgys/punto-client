@@ -1,6 +1,6 @@
 ﻿namespace punto_client.Models;
 
-class Position
+public class Position
 {
     public int X;
     public int Y;

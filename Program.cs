@@ -4,10 +4,14 @@ using punto_client.Strategie;
 
 public class Program
 {
-    private static List<IGestionnaireStrategie> _strategiesIA = new List<IGestionnaireStrategie>(); 
+    private static IGestionnaireStrategie[] _strategiesIA; 
 
     public static async Task Main(string[] args)
     {
+        // Debug pour lancer une partie en locale
+        JouerEnLocal();
+        return;
+
         // Si le programme est lancé avec un argument
         if (args != null && args.Count() == 1)
         {
@@ -31,6 +35,50 @@ public class Program
                 await JouerEnLigne();
             }
         }
+    }
+
+    public static void SimulerPartieLocales(int simulation)
+    {
+        List<int> victoiresCpu = new List<int> { 0, 0 };
+
+        for (int i = 1; i <= simulation; i++)
+        {
+            GestionnaireJeuLocal gestionnaireJeu = new GestionnaireJeuLocal();
+
+            // Crée une nouvelle partie
+            int nombreJoueurs = 2;
+            gestionnaireJeu.CreerNouveauJeu(nombreJoueurs);
+            _strategiesIA = gestionnaireJeu.DefinirIA(
+                new GestionnaireStrategieAleatoire(),
+                new GestionnaireStrategieAleatoire());
+
+            // Commence la partie
+            while (gestionnaireJeu.ObtenirEtatJeu() == EtatJeu.EnCours)
+            {
+                gestionnaireJeu.AfficherPlateau();
+                var joueur = gestionnaireJeu.ObtenirJoueurDevantJouer();
+                GestionnaireJeuLocal.AfficherMessageDeJoueur(joueur.OrdreDeJeu, $"Tuiles : [{string.Join(',', joueur.TuilesDansLaMain)}]\n");
+
+                var tuile = _strategiesIA[joueur.OrdreDeJeu - 1].ObtenirProchainCoup(gestionnaireJeu.ObtenirPlateau(), joueur);
+                gestionnaireJeu.PlacerTuile(tuile);
+            }
+
+            // Fin de la partie, affichage du plateau et du vainqueur
+            gestionnaireJeu.AfficherPlateau();
+            var jeu = gestionnaireJeu.ObtenirJeu();
+            if (jeu.Vainqueur != null)
+            {
+                Console.WriteLine($"\nLe joueur {jeu.Vainqueur.Nom} a gagné la partie");
+                victoiresCpu[jeu.Vainqueur.OrdreDeJeu - 1]++;
+            }
+            else
+            {
+                Console.WriteLine("C'est une égalité !");
+            }
+        }
+
+        Console.WriteLine();
+        victoiresCpu.ForEach(i => Console.WriteLine($"Victoire CPU : {i}"));
     }
 
     public static void JouerEnLocal()
@@ -100,6 +148,10 @@ public class Program
         if (jeu.Vainqueur != null)
         {
             Console.WriteLine($"\nLe joueur {jeu.Vainqueur.Nom} a gagné la partie");
+        }
+        else
+        {
+            Console.WriteLine("C'est une égalité !");
         }
     }
 

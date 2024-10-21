@@ -7,6 +7,32 @@ namespace punto_client.Strategie;
 /// </summary>
 public class GestionnaireRegles
 {
+    /// <summary>
+    /// Permet de créer les tuiles dans la pioche du joueur. 
+    /// Les tuiles sont mélangées au hasard.
+    /// </summary>
+    /// <returns></returns>
+    public static List<int> CreerTuilesPourJoueur()
+    {
+        // Mélange des tuiles
+        var tuiles = new List<int>
+        {
+            1, 1,
+            2, 2,
+            3, 3,
+            4, 4,
+            5, 5,
+            6, 6,
+            7, 7,
+            8, 8,
+            9, 9
+        };
+
+        // Mélange des tuiles pour plus d'aléatoire
+        var aleatoire = new Random();
+        return tuiles.OrderBy(t => aleatoire.Next()).ToList();
+    }
+
     public static bool PeutPlacerTuile(Plateau plateau, Joueur joueur, Tuile tuile)
     {
         // Récupérer les positions des tuiles déjà placées
@@ -49,5 +75,96 @@ public class GestionnaireRegles
             && estDansLaGrille;                                 // La tuile doit être placée dans une grille 6x6
 
         return coupAutorise;
+    }
+
+    /// <summary>
+    /// Vérifie si le joueur a aligné 4 tuiles horizontalement, verticalement ou en diagonale
+    /// </summary>
+    /// <param name="joueur"></param>
+    /// <returns></returns>
+    public static bool VerifierConditionsVictoire(Plateau plateau, Joueur joueur, int tuilesAligneesPourGagner = 4)
+    {
+        // Récupère les tuiles du joueur
+        var tuilesJoueur = plateau.TuilesPlacees
+                            .Where(t => t.Proprietaire.Nom == joueur.Nom)
+                            .ToList();
+
+        // Parcourir chaque tuile du joueur pour vérifier les alignements
+        foreach (var tuile in tuilesJoueur)
+        {
+            // Vérification horizontale
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 0, tuilesAligneesPourGagner)) return true;
+
+            // Vérification verticale
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 0, 1, tuilesAligneesPourGagner)) return true;
+
+            // Vérification diagonale gauche-droite (bas-droite)
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 1, tuilesAligneesPourGagner)) return true;
+
+            // Vérification diagonale droite-gauche (bas-gauche)
+            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, -1, tuilesAligneesPourGagner)) return true;
+        }
+
+        return false; // Aucun alignement trouvé
+    }
+
+    public static bool VerifierConditionsVictoireAvecTuile(Plateau plateau, Joueur joueur, Tuile tuileAPoser, int tuilesAligneesPourGagner = 4)
+    {
+        // Ajoute temporairement la tuile au plateau pour simuler le coup
+        var plateauTemporaire = new Plateau
+        {
+            TuilesPlacees = new List<Tuile>(plateau.TuilesPlacees) { tuileAPoser }
+        };
+
+        // Utilise la méthode VerifierConditionsVictoire pour vérifier si ce coup entraîne une victoire
+        return VerifierConditionsVictoire(plateauTemporaire, joueur, tuilesAligneesPourGagner);
+    }
+
+    /// <summary>
+    /// Cette méthode vérifie si 4 tuiles sont alignées dans une direction spécifique
+    /// </summary>
+    /// <param name="tuilesJoueur"></param>
+    /// <param name="tuile"></param>
+    /// <param name="deltaX"></param>
+    /// <param name="deltaY"></param>
+    /// <returns></returns>
+    public static bool VerifierAlignementDirection(List<Tuile> tuilesJoueur, Tuile tuile, int deltaX, int deltaY, int tuilesAligneesPourGagner = 4)
+    {
+        int count = 1; // Compte la tuile actuelle
+
+        // Vérifie dans la direction positive (droite/bas)
+        for (int i = 1; i < tuilesAligneesPourGagner; i++)
+        {
+            var tuileSuivante = tuilesJoueur.FirstOrDefault(t =>
+                t.PositionX == tuile.PositionX + i * deltaX &&
+                t.PositionY == tuile.PositionY + i * deltaY);
+            if (tuileSuivante != null)
+            {
+                count++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Vérifie dans la direction négative (gauche/haut)
+        for (int i = 1; i < tuilesAligneesPourGagner; i++)
+        {
+            var tuilePrecedente = tuilesJoueur.FirstOrDefault(t =>
+                t.PositionX == tuile.PositionX - i * deltaX &&
+                t.PositionY == tuile.PositionY - i * deltaY);
+            if (tuilePrecedente != null)
+            {
+                count++;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        // Si on a trouvé 4 tuiles alignées
+        return count >= tuilesAligneesPourGagner;
     }
 }

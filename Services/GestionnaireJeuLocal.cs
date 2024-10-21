@@ -43,7 +43,7 @@ public class GestionnaireJeuLocal
             Nom = nomJoueur,
             EstUnOrdinateur = ordinateur,
             OrdreDeJeu = Jeu.Joueurs.Count + 1, // nombre de joueurs + 1
-            TuilesDansLaPioche = CreerTuilesPourJoueur(),
+            TuilesDansLaPioche = GestionnaireRegles.CreerTuilesPourJoueur(),
             TuilesDansLaMain = new List<int>()
         };
 
@@ -139,27 +139,35 @@ public class GestionnaireJeuLocal
     /// <summary>
     /// Permet d'ajouter des ordinateurs à la partie.
     /// </summary>
-    /// <param name="nombreDeCPU"></param>
+    /// <param name="strategies">Stratégie d'IA à utiliser</param>
     /// <returns></returns>
-    public List<IGestionnaireStrategie> DefinirIA(int nombreDeCPU = -1)
+    public IGestionnaireStrategie[] DefinirIA(params IGestionnaireStrategie[] strategies)
     {
-        var strategies = new List<IGestionnaireStrategie>();
-
-        // Choix du nombre d'IA
-        int maxCpu = Jeu.NombreMaxDeJoueurs - Jeu.Joueurs.Count;
-        if (nombreDeCPU == -1)
+        if (strategies.Any())
         {
+            for (int i = 0; i < strategies.Length; i++)
+            {
+                AjouterUnJoueur(i + 1, true); // Ajoute un ordinateur
+            }
+        }
+        else // Pas de stratégie définie
+        {
+            // Choix du nombre d'IA
+            int maxCpu = Jeu.NombreMaxDeJoueurs - Jeu.Joueurs.Count;
+            int nombreDeCPU = -1;
             Console.Write($"Précisez le nombre de joueurs gérés par l'ordinateur (maximum {maxCpu}) : ");
             do
             {
                 int.TryParse(Console.ReadLine(), out nombreDeCPU);
             } while (nombreDeCPU < 0 && nombreDeCPU >= maxCpu);
-        }
 
-        for (int i = 0; i < nombreDeCPU; i++)
-        {
-            AjouterUnJoueur(i+1, true); // Ajoute un ordinateur
-            strategies.Add(new GestionnaireStrategieAleatoire()); // Définit la stratégie utilisée
+            strategies = new IGestionnaireStrategie[nombreDeCPU];
+
+            for (int i = 0; i < nombreDeCPU; i++)
+            {
+                AjouterUnJoueur(i + 1, true); // Ajoute un ordinateur
+                strategies[i] = new GestionnaireStrategieEpee(); // Définit la stratégie utilisée
+            }
         }
 
         return strategies;
@@ -219,7 +227,7 @@ public class GestionnaireJeuLocal
         Console.WriteLine($"{joueur.Nom} a placé une tuile de valeur {tuile.Valeur} en position ({tuile.PositionX}, {tuile.PositionY}).");
 
         // Vérifier si le joueur a gagné
-        if (VerifierConditionsVictoire(joueur))
+        if (GestionnaireRegles.VerifierConditionsVictoire(Jeu.Plateau, joueur))
         {
             Jeu.EtatJeu = EtatJeu.Termine;
             Jeu.Vainqueur = joueur;
@@ -252,39 +260,8 @@ public class GestionnaireJeuLocal
             var aleatoire = new Random();
             Jeu.Vainqueur = Jeu.Joueurs
                 .OrderBy(j => aleatoire.Next())
-                .FirstOrDefault(j => VerifierConditionsVictoire(j, 3));
+                .FirstOrDefault(j => GestionnaireRegles.VerifierConditionsVictoire(Jeu.Plateau, j, 3));
         }
-    }
-
-    /// <summary>
-    /// Vérifie si le joueur a aligné 4 tuiles horizontalement, verticalement ou en diagonale
-    /// </summary>
-    /// <param name="joueur"></param>
-    /// <returns></returns>
-    public bool VerifierConditionsVictoire(Joueur joueur, int tuilesAligneesPourGagner = 4)
-    {
-        // Récupère les tuiles du joueur
-        var tuilesJoueur = Jeu.Plateau.TuilesPlacees
-                            .Where(t => t.Proprietaire.Nom == joueur.Nom)
-                            .ToList();
-
-        // Parcourir chaque tuile du joueur pour vérifier les alignements
-        foreach (var tuile in tuilesJoueur)
-        {
-            // Vérification horizontale
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 0, tuilesAligneesPourGagner)) return true;
-
-            // Vérification verticale
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 0, 1, tuilesAligneesPourGagner)) return true;
-
-            // Vérification diagonale gauche-droite (bas-droite)
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, 1, tuilesAligneesPourGagner)) return true;
-
-            // Vérification diagonale droite-gauche (bas-gauche)
-            if (VerifierAlignementDirection(tuilesJoueur, tuile, 1, -1, tuilesAligneesPourGagner)) return true;
-        }
-
-        return false; // Aucun alignement trouvé
     }
 
     /// <summary>
@@ -304,80 +281,6 @@ public class GestionnaireJeuLocal
         };
         Console.Write(message);
         Console.ResetColor();
-    }
-
-    /// <summary>
-    /// Cette méthode vérifie si 4 tuiles sont alignées dans une direction spécifique
-    /// </summary>
-    /// <param name="tuilesJoueur"></param>
-    /// <param name="tuile"></param>
-    /// <param name="deltaX"></param>
-    /// <param name="deltaY"></param>
-    /// <returns></returns>
-    private static bool VerifierAlignementDirection(List<Tuile> tuilesJoueur, Tuile tuile, int deltaX, int deltaY, int tuilesAligneesPourGagner = 4)
-    {
-        int count = 1; // Compte la tuile actuelle
-
-        // Vérifie dans la direction positive (droite/bas)
-        for (int i = 1; i < tuilesAligneesPourGagner; i++)
-        {
-            var tuileSuivante = tuilesJoueur.FirstOrDefault(t =>
-                t.PositionX == tuile.PositionX + i * deltaX &&
-                t.PositionY == tuile.PositionY + i * deltaY);
-            if (tuileSuivante != null)
-            {
-                count++;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        // Vérifie dans la direction négative (gauche/haut)
-        for (int i = 1; i < tuilesAligneesPourGagner; i++)
-        {
-            var tuilePrecedente = tuilesJoueur.FirstOrDefault(t =>
-                t.PositionX == tuile.PositionX - i * deltaX &&
-                t.PositionY == tuile.PositionY - i * deltaY);
-            if (tuilePrecedente != null)
-            {
-                count++;
-            }
-            else
-            {
-                break;
-            }
-        }
-
-        // Si on a trouvé 4 tuiles alignées
-        return count >= tuilesAligneesPourGagner;
-    }
-
-    /// <summary>
-    /// Permet de créer les tuiles dans la pioche du joueur. 
-    /// Les tuiles sont mélangées au hasard.
-    /// </summary>
-    /// <returns></returns>
-    private static List<int> CreerTuilesPourJoueur()
-    {
-        // Mélange des tuiles
-        var tuiles = new List<int>
-        {
-            1, 1,
-            2, 2,
-            3, 3,
-            4, 4,
-            5, 5,
-            6, 6,
-            7, 7,
-            8, 8,
-            9, 9
-        };
-
-        // Mélange des tuiles pour plus d'aléatoire
-        var aleatoire = new Random();
-        return tuiles.OrderBy(t => aleatoire.Next()).ToList();
     }
 
     /// <summary>
