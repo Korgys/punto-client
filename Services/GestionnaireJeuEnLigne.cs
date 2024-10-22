@@ -8,6 +8,11 @@ public class GestionnaireJeuEnLigne
 {
     private HubConnection _connection;
 
+    public Joueur _joueur;
+    public Plateau _plateau;
+    public TaskCompletionSource<Joueur> _joueurTcs;
+    public TaskCompletionSource<Plateau> _plateauTcs;
+
     public GestionnaireJeuEnLigne()
     {
         // Configuration de la connexion SignalR
@@ -45,10 +50,19 @@ public class GestionnaireJeuEnLigne
             List<Tuile> tuiles = JsonConvert.DeserializeObject<List<Tuile>>(jsonPlateau);
 
             // Crée un plateau et y assigne les tuiles
-            Plateau plateau = new Plateau { TuilesPlacees = tuiles };
+            _plateau = new Plateau { TuilesPlacees = tuiles };
+            _plateauTcs.TrySetResult(_plateau);
 
             // Affiche le plateau mis à jour
-            AfficherPlateau(plateau);
+            AfficherPlateau(_plateau);
+        });
+
+        _connection.On<string>("MettreAJourJoueur", (jsonJoueur) =>
+        {
+            _joueur = JsonConvert.DeserializeObject<Joueur>(jsonJoueur);
+            Console.WriteLine($"Joueur mis à jour : {_joueur.Nom}");
+            // Complète la TaskCompletionSource avec le joueur reçu
+            _joueurTcs.TrySetResult(_joueur);
         });
 
         _connection.On<string>("TerminerJeu", (vainqueur) =>
@@ -97,6 +111,52 @@ public class GestionnaireJeuEnLigne
     public async Task Deconnecter()
     {
         await _connection.StopAsync();
+    }
+
+    public async Task<Plateau> ObtenirPlateau()
+    {
+        _plateauTcs = new TaskCompletionSource<Plateau>();
+
+        try
+        {
+            await _connection.InvokeAsync("ObtenirPlateau");
+            return await _plateauTcs.Task;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors de l'appel à ObtenirPlateau : {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task<Joueur> ObtenirJoueur()
+    {
+        // Crée une nouvelle TaskCompletionSource pour attendre la réponse
+        _joueurTcs = new TaskCompletionSource<Joueur>();
+
+        try
+        {
+            await _connection.InvokeAsync("ObtenirJoueur");
+            // Attend la réponse du serveur via l'événement "RecevoirJoueur"
+            return await _joueurTcs.Task;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors de l'appel à ObtenirJoueur : {ex.Message}");
+            return null;
+        }
+    }
+
+    public async Task ObtenirMainJoueur()
+    {
+        try
+        {
+            await _connection.InvokeAsync("ObtenirMainJoueur");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors de l'appel à ObtenirMainJoueur : {ex.Message}");
+        }
     }
 
     /// <summary>

@@ -157,6 +157,7 @@ public class Program
     public static async Task JouerEnLigne()
     {
         var gestionnaireJeuEnLigne = new GestionnaireJeuEnLigne();
+        var strategie = new GestionnaireStrategieAleatoire();
         
         // Connexion au serveur
         await gestionnaireJeuEnLigne.Connecter();
@@ -171,27 +172,35 @@ public class Program
         {
             Console.WriteLine("Que voulez-vous faire ?");
             Console.WriteLine("1. Jouer une tuile");
-            Console.WriteLine("2. Quitter");
+            Console.WriteLine("2. Afficher plateau et main");
+            Console.WriteLine("3. Quitter");
 
             var choixOption = Console.ReadLine();
 
             if (choixOption == "1")
             {
+                // Récupère le joueur
+                await gestionnaireJeuEnLigne.ObtenirJoueur();
+                Joueur joueur = gestionnaireJeuEnLigne._joueur;
+
+                // Récupère le plateau
+                await gestionnaireJeuEnLigne.ObtenirPlateau();
+                Plateau plateau = gestionnaireJeuEnLigne._plateau;
+
                 // Choix des informations de la tuile
-                string[] choixTuile = [];
-                do
-                {
-                    Console.WriteLine("Entrez valeur et coordonnées (x y) de la tuile :");
-                    choixTuile = Console.ReadLine().Split(' ');
-                } while (choixTuile.Length != 3);
-                int valeur = int.Parse(choixTuile[0]);
-                int x = int.Parse(choixTuile[1]);
-                int y = int.Parse(choixTuile[2]);
-                
+                Tuile tuile = strategie.ObtenirProchainCoup(plateau, joueur);
+
                 // Jouer une tuile
-                await gestionnaireJeuEnLigne.JouerTuile(nomDuJoueur, x, y, valeur);
+                await gestionnaireJeuEnLigne.JouerTuile(joueur.Nom, tuile.PositionX, tuile.PositionY, tuile.Valeur);
             }
             else if (choixOption == "2")
+            {
+                // Déconnexion
+                await gestionnaireJeuEnLigne.ObtenirPlateau();
+                await gestionnaireJeuEnLigne.ObtenirMainJoueur();
+                Console.ReadLine();
+            }
+            else if (choixOption == "3")
             {
                 // Déconnexion
                 await gestionnaireJeuEnLigne.Deconnecter();
