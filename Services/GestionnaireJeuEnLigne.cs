@@ -12,7 +12,7 @@ public class GestionnaireJeuEnLigne
     {
         // Configuration de la connexion SignalR
         _connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5000/gameHub") 
+            .WithUrl("http://localhost:5000/punto") 
             .Build();
 
         // Gestion des événements envoyés par le serveur
@@ -33,7 +33,10 @@ public class GestionnaireJeuEnLigne
 
         _connection.On<List<int>>("MettreAJourTuilesEnMain", (tuilesEnMain) =>
         {
-            Console.WriteLine("Vos tuiles en main : " + string.Join(", ", tuilesEnMain));
+            if (tuilesEnMain != null)
+            {
+                Console.WriteLine("Vos tuiles en main : " + string.Join(", ", tuilesEnMain));
+            }
         });
 
         _connection.On<string>("MettreAJourPlateau", (jsonPlateau) =>
@@ -67,11 +70,11 @@ public class GestionnaireJeuEnLigne
         }
     }
 
-    public async Task RejoindrePartie(string nomDuJoueur, string? equipe = null)
+    public async Task RejoindrePartie(string nomDuJoueur)
     {
         try
         {
-            await _connection.InvokeAsync("RejoindrePartie", nomDuJoueur, equipe);
+            await _connection.InvokeAsync("RejoindrePartie", nomDuJoueur);
         }
         catch (Exception ex)
         {

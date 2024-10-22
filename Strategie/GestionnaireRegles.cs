@@ -116,6 +116,14 @@ public class GestionnaireRegles
             TuilesPlacees = new List<Tuile>(plateau.TuilesPlacees) { tuileAPoser }
         };
 
+        // Corrige le cas où on place une tuile par dessus une tuile existante
+        IEnumerable<Tuile> doublons = plateauTemporaire.TuilesPlacees
+            .Where(t => t.PositionX == tuileAPoser.PositionX && t.PositionY == tuileAPoser.PositionY);
+        if (doublons.Count() == 2)
+        {
+            plateauTemporaire.TuilesPlacees.Remove(doublons.OrderBy(t => t.Valeur).First());
+        }
+
         // Utilise la méthode VerifierConditionsVictoire pour vérifier si ce coup entraîne une victoire
         return VerifierConditionsVictoire(plateauTemporaire, joueur, tuilesAligneesPourGagner);
     }
@@ -191,7 +199,9 @@ public class GestionnaireRegles
                     PositionY = position.Y
                 };
 
-                if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, coup))
+                // Si on peut placer la tuile et qu'elle n'est pas déjà référencée dans les coups possibles
+                if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, coup)
+                    && !coupsPossibles.Any(c => c.Valeur == coup.Valeur && c.PositionX == coup.PositionX && c.PositionY == coup.PositionY))
                 {
                     coupsPossibles.Add(coup);
                 }

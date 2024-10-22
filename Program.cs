@@ -8,10 +8,6 @@ public class Program
 
     public static async Task Main(string[] args)
     {
-        // Debug pour lancer une partie en locale
-        JouerEnLocal();
-        return;
-
         // Si le programme est lancé avec un argument
         if (args != null && args.Count() == 1)
         {
@@ -78,7 +74,10 @@ public class Program
         }
 
         Console.WriteLine();
-        victoiresCpu.ForEach(i => Console.WriteLine($"Victoire CPU : {i}"));
+        for (int i = 1; i <= victoiresCpu.Count; i++)
+        {
+            Console.WriteLine($"Victoire CPU {i} : {victoiresCpu[i - 1]}");
+        }
     }
 
     public static void JouerEnLocal()
@@ -158,18 +157,15 @@ public class Program
     public static async Task JouerEnLigne()
     {
         var gestionnaireJeuEnLigne = new GestionnaireJeuEnLigne();
-
+        
         // Connexion au serveur
         await gestionnaireJeuEnLigne.Connecter();
 
         Console.WriteLine("Entrez votre nom de joueur :");
         string nomDuJoueur = Console.ReadLine();
 
-        Console.WriteLine("Voulez-vous rejoindre une équipe ? (Laisser vide pour créer votre propre équipe)");
-        string equipe = Console.ReadLine();
-
         // Rejoindre la partie
-        await gestionnaireJeuEnLigne.RejoindrePartie(nomDuJoueur, string.IsNullOrWhiteSpace(equipe) ? null : equipe);
+        await gestionnaireJeuEnLigne.RejoindrePartie(nomDuJoueur);
 
         while (true)
         {
@@ -177,22 +173,25 @@ public class Program
             Console.WriteLine("1. Jouer une tuile");
             Console.WriteLine("2. Quitter");
 
-            var choix = Console.ReadLine();
+            var choixOption = Console.ReadLine();
 
-            if (choix == "1")
+            if (choixOption == "1")
             {
-                Console.WriteLine("Entrez les coordonnées (x y) de la tuile :");
-                var coordonnees = Console.ReadLine().Split(' ');
-                int x = int.Parse(coordonnees[0]);
-                int y = int.Parse(coordonnees[1]);
-
-                Console.WriteLine("Entrez la valeur de la tuile à jouer :");
-                int valeur = int.Parse(Console.ReadLine());
-
+                // Choix des informations de la tuile
+                string[] choixTuile = [];
+                do
+                {
+                    Console.WriteLine("Entrez valeur et coordonnées (x y) de la tuile :");
+                    choixTuile = Console.ReadLine().Split(' ');
+                } while (choixTuile.Length != 3);
+                int valeur = int.Parse(choixTuile[0]);
+                int x = int.Parse(choixTuile[1]);
+                int y = int.Parse(choixTuile[2]);
+                
                 // Jouer une tuile
                 await gestionnaireJeuEnLigne.JouerTuile(nomDuJoueur, x, y, valeur);
             }
-            else if (choix == "2")
+            else if (choixOption == "2")
             {
                 // Déconnexion
                 await gestionnaireJeuEnLigne.Deconnecter();
