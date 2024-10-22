@@ -168,49 +168,35 @@ public class Program
         // Rejoindre la partie
         await gestionnaireJeuEnLigne.RejoindrePartie(nomDuJoueur);
 
-        while (true)
+        // Récupère le joueur
+        await gestionnaireJeuEnLigne.ObtenirJoueur();
+        Joueur joueur = gestionnaireJeuEnLigne._joueur;
+
+        // Tant que la partie n'est pas terminée
+        while (gestionnaireJeuEnLigne._etatJeu != EtatJeu.Termine.ToString())
         {
-            Console.WriteLine("Que voulez-vous faire ?");
-            Console.WriteLine("1. Jouer une tuile");
-            Console.WriteLine("2. Afficher plateau et main");
-            Console.WriteLine("3. Quitter");
+            // Récupère l'état du jeu
+            bool doitJouer = false;
 
-            var choixOption = Console.ReadLine();
-
-            if (choixOption == "1")
+            // Attends tant que c'est pas à nous de jouer
+            do
             {
-                // Récupère le joueur
-                await gestionnaireJeuEnLigne.ObtenirJoueur();
-                Joueur joueur = gestionnaireJeuEnLigne._joueur;
+                await gestionnaireJeuEnLigne.ObtenirEtatJeu();
+                doitJouer = gestionnaireJeuEnLigne._doitJouer;
+                Thread.Sleep(2000);
+            } while (!doitJouer);
 
-                // Récupère le plateau
-                await gestionnaireJeuEnLigne.ObtenirPlateau();
-                Plateau plateau = gestionnaireJeuEnLigne._plateau;
+            // Récupère le plateau
+            await gestionnaireJeuEnLigne.ObtenirPlateau();
+            Plateau plateau = gestionnaireJeuEnLigne._plateau;
 
-                // Choix des informations de la tuile
-                Tuile tuile = strategie.ObtenirProchainCoup(plateau, joueur);
+            // Choix des informations de la tuile
+            Tuile tuile = strategie.ObtenirProchainCoup(plateau, joueur);
 
-                // Jouer une tuile
-                await gestionnaireJeuEnLigne.JouerTuile(joueur.Nom, tuile.PositionX, tuile.PositionY, tuile.Valeur);
-            }
-            else if (choixOption == "2")
-            {
-                // Déconnexion
-                await gestionnaireJeuEnLigne.ObtenirPlateau();
-                await gestionnaireJeuEnLigne.ObtenirMainJoueur();
-                Console.ReadLine();
-            }
-            else if (choixOption == "3")
-            {
-                // Déconnexion
-                await gestionnaireJeuEnLigne.Deconnecter();
-                Console.WriteLine("Vous vous êtes déconnecté.");
-                break;
-            }
-            else
-            {
-                Console.WriteLine("Choix non valide, veuillez réessayer.");
-            }
+            // Jouer une tuile
+            await gestionnaireJeuEnLigne.JouerTuile(joueur.Nom, tuile.PositionX, tuile.PositionY, tuile.Valeur);
         }
+
+        Console.WriteLine("La partie est finie.");
     }
 }

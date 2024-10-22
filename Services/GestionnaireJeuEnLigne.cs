@@ -10,8 +10,12 @@ public class GestionnaireJeuEnLigne
 
     public Joueur _joueur;
     public Plateau _plateau;
+    public string _etatJeu;
+    public bool _doitJouer;
+    public string _auTourDeJoueur = "";
     public TaskCompletionSource<Joueur> _joueurTcs;
     public TaskCompletionSource<Plateau> _plateauTcs;
+    public TaskCompletionSource<bool> _doitJouerTcs;
 
     public GestionnaireJeuEnLigne()
     {
@@ -34,6 +38,15 @@ public class GestionnaireJeuEnLigne
         _connection.On<string>("CommencerTour", (joueur) =>
         {
             Console.WriteLine($"C'est au tour de {joueur} de jouer.");
+            _auTourDeJoueur = joueur;
+        });
+
+        _connection.On<string>("MettreAJourEtatJeu", (etatJeu) =>
+        {
+            _etatJeu = etatJeu;
+            // Si le tour qui commence est celui du joueur, dans ce cas c'est à nous de jouer
+            _doitJouer = EtatJeu.EnCours.ToString() == _etatJeu && _joueur?.Nom == _auTourDeJoueur;            
+            _doitJouerTcs.TrySetResult(_doitJouer);
         });
 
         _connection.On<List<int>>("MettreAJourTuilesEnMain", (tuilesEnMain) =>
@@ -51,7 +64,7 @@ public class GestionnaireJeuEnLigne
 
             // Crée un plateau et y assigne les tuiles
             _plateau = new Plateau { TuilesPlacees = tuiles };
-            _plateauTcs.TrySetResult(_plateau);
+            if (_plateauTcs != null) _plateauTcs.TrySetResult(_plateau);
 
             // Affiche le plateau mis à jour
             AfficherPlateau(_plateau);
@@ -62,12 +75,13 @@ public class GestionnaireJeuEnLigne
             _joueur = JsonConvert.DeserializeObject<Joueur>(jsonJoueur);
             Console.WriteLine($"Joueur mis à jour : {_joueur.Nom}");
             // Complète la TaskCompletionSource avec le joueur reçu
-            _joueurTcs.TrySetResult(_joueur);
+            if (_joueurTcs != null) _joueurTcs.TrySetResult(_joueur);
         });
 
         _connection.On<string>("TerminerJeu", (vainqueur) =>
         {
             Console.WriteLine($"La partie est terminée. Le vainqueur est {vainqueur}.");
+            _etatJeu = EtatJeu.Termine.ToString();
         });
     }
 
@@ -112,6 +126,24 @@ public class GestionnaireJeuEnLigne
     {
         await _connection.StopAsync();
     }
+
+    public async Task<bool> ObtenirEtatJeu()
+    {
+        // Crée une nouvelle TaskCompletionSource pour attendre la réponse
+        _doitJouerTcs = new TaskCompletionSource<bool>();
+
+        try
+        {
+            await _connection.InvokeAsync("ObtenirEtatJeu");
+            return await _doitJouerTcs.Task;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Erreur lors de l'appel à ObtenirEtatJeu : {ex.Message}");
+            return false;
+        }
+    }
+
 
     public async Task<Plateau> ObtenirPlateau()
     {
