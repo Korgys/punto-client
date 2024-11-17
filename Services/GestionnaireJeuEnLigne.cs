@@ -13,6 +13,7 @@ public class GestionnaireJeuEnLigne
     public string _etatJeu;
     public bool _doitJouer;
     public string _auTourDeJoueur = "";
+    public List<int> _tuilesEnMain;
     public TaskCompletionSource<Joueur> _joueurTcs;
     public TaskCompletionSource<Plateau> _plateauTcs;
     public TaskCompletionSource<bool> _doitJouerTcs;
@@ -21,7 +22,7 @@ public class GestionnaireJeuEnLigne
     {
         // Configuration de la connexion SignalR
         _connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5000/punto") 
+            .WithUrl("http://localhost:5000/punto")
             .Build();
 
         // Gestion des événements envoyés par le serveur
@@ -54,6 +55,7 @@ public class GestionnaireJeuEnLigne
             if (tuilesEnMain != null)
             {
                 Console.WriteLine("Vos tuiles en main : " + string.Join(", ", tuilesEnMain));
+                _tuilesEnMain = tuilesEnMain;
             }
         });
 

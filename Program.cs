@@ -33,7 +33,7 @@ public class Program
         }
     }
 
-    public static void SimulerPartieLocales(int simulation)
+    public static void SimulerPartieLocales(int simulation, bool afficherDetailsParties = true)
     {
         List<int> victoiresCpu = new List<int> { 0, 0 };
 
@@ -51,25 +51,28 @@ public class Program
             // Commence la partie
             while (gestionnaireJeu.ObtenirEtatJeu() == EtatJeu.EnCours)
             {
-                gestionnaireJeu.AfficherPlateau();
+                if (afficherDetailsParties) gestionnaireJeu.AfficherPlateau();
                 var joueur = gestionnaireJeu.ObtenirJoueurDevantJouer();
-                GestionnaireJeuLocal.AfficherMessageDeJoueur(joueur.OrdreDeJeu, $"Tuiles : [{string.Join(',', joueur.TuilesDansLaMain)}]\n");
+                if (afficherDetailsParties)
+                {
+                    GestionnaireJeuLocal.AfficherMessageDeJoueur(joueur.OrdreDeJeu, $"Tuiles : [{string.Join(',', joueur.TuilesDansLaMain)}]\n");
+                }
 
                 var tuile = _strategiesIA[joueur.OrdreDeJeu - 1].ObtenirProchainCoup(gestionnaireJeu.ObtenirPlateau(), joueur);
                 gestionnaireJeu.PlacerTuile(tuile);
             }
 
             // Fin de la partie, affichage du plateau et du vainqueur
-            gestionnaireJeu.AfficherPlateau();
+            if (afficherDetailsParties) gestionnaireJeu.AfficherPlateau();
             var jeu = gestionnaireJeu.ObtenirJeu();
             if (jeu.Vainqueur != null)
             {
-                Console.WriteLine($"\nLe joueur {jeu.Vainqueur.Nom} a gagné la partie");
+                Console.WriteLine($"Le joueur {jeu.Vainqueur.Nom} a gagné la partie");
                 victoiresCpu[jeu.Vainqueur.OrdreDeJeu - 1]++;
             }
             else
             {
-                Console.WriteLine("C'est une égalité !");
+                Console.WriteLine($"C'est une égalité !");
             }
         }
 
@@ -184,11 +187,20 @@ public class Program
                 await gestionnaireJeuEnLigne.ObtenirEtatJeu();
                 doitJouer = gestionnaireJeuEnLigne._doitJouer;
                 Thread.Sleep(2000);
+
+                if (gestionnaireJeuEnLigne._etatJeu == EtatJeu.Termine.ToString())
+                {
+                    Console.WriteLine("La partie est finie.");
+                    return;
+                }
             } while (!doitJouer);
 
             // Récupère le plateau
             await gestionnaireJeuEnLigne.ObtenirPlateau();
             Plateau plateau = gestionnaireJeuEnLigne._plateau;
+
+            // Récupère les tuiles en main
+            joueur.TuilesDansLaMain = gestionnaireJeuEnLigne._tuilesEnMain;
 
             // Choix des informations de la tuile
             Tuile tuile = strategie.ObtenirProchainCoup(plateau, joueur);

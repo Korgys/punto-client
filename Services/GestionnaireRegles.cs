@@ -1,6 +1,6 @@
 ﻿using punto_client.Models;
 
-namespace punto_client.Strategie;
+namespace punto_client.Services;
 
 /// <summary>
 /// Classe permettant de gérer les règles du jeu.
@@ -8,33 +8,16 @@ namespace punto_client.Strategie;
 public class GestionnaireRegles
 {
     /// <summary>
-    /// Permet de créer les tuiles dans la pioche du joueur. 
-    /// Les tuiles sont mélangées au hasard.
+    /// Renvoie VRAI si le joueur peut placer la tuile sur le plateau.
     /// </summary>
+    /// <param name="plateau"></param>
+    /// <param name="joueur"></param>
+    /// <param name="tuile"></param>
     /// <returns></returns>
-    public static List<int> CreerTuilesPourJoueur()
-    {
-        // Mélange des tuiles
-        var tuiles = new List<int>
-        {
-            1, 1,
-            2, 2,
-            3, 3,
-            4, 4,
-            5, 5,
-            6, 6,
-            7, 7,
-            8, 8,
-            9, 9
-        };
-
-        // Mélange des tuiles pour plus d'aléatoire
-        var aleatoire = new Random();
-        return tuiles.OrderBy(t => aleatoire.Next()).ToList();
-    }
-
     public static bool PeutPlacerTuile(Plateau plateau, Joueur joueur, Tuile tuile)
     {
+        if (tuile == null) return false;
+
         // Récupérer les positions des tuiles déjà placées
         var tuilesPlacees = plateau.TuilesPlacees;
 
@@ -108,6 +91,14 @@ public class GestionnaireRegles
         return false; // Aucun alignement trouvé
     }
 
+    /// <summary>
+    /// Vérifie l'impact de la tuile placée sur les conditions de victoire du joueur.
+    /// </summary>
+    /// <param name="plateau"></param>
+    /// <param name="joueur"></param>
+    /// <param name="tuileAPoser"></param>
+    /// <param name="tuilesAligneesPourGagner"></param>
+    /// <returns></returns>
     public static bool VerifierConditionsVictoireAvecTuile(Plateau plateau, Joueur joueur, Tuile tuileAPoser, int tuilesAligneesPourGagner = 4)
     {
         // Ajoute temporairement la tuile au plateau pour simuler le coup
@@ -181,94 +172,82 @@ public class GestionnaireRegles
     /// </summary>
     public static List<Tuile> ObtenirTousLesCoupsPossibles(Plateau plateau, Joueur joueur)
     {
-        var coupsPossibles = new List<Tuile>();
+        var positionsPossibles = new List<Tuile>();
 
-        foreach (int valeurTuile in joueur.TuilesDansLaMain)
+        // Pour chaque tuile distincte dans la main
+        foreach (int valeurTuile in joueur.TuilesDansLaMain.Distinct())
         {
-            var tuile = new Tuile { Proprietaire = joueur, Valeur = valeurTuile };
-
-            var positionsPossibles = ObtenirPositionsPossibles(plateau, tuile);
-
-            foreach (var position in positionsPossibles)
-            {
-                var coup = new Tuile
-                {
-                    Proprietaire = joueur,
-                    Valeur = valeurTuile,
-                    PositionX = position.X,
-                    PositionY = position.Y
-                };
-
-                // Si on peut placer la tuile et qu'elle n'est pas déjà référencée dans les coups possibles
-                if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, coup)
-                    && !coupsPossibles.Any(c => c.Valeur == coup.Valeur && c.PositionX == coup.PositionX && c.PositionY == coup.PositionY))
-                {
-                    coupsPossibles.Add(coup);
-                }
-            }
+            positionsPossibles.AddRange(ObtenirPositionsPossibles(plateau, joueur, valeurTuile));
         }
-
-        return coupsPossibles;
-    }
-
-    /// <summary>
-    /// Obtenir les positions possibles pour une tuile donnée (méthode déjà existante).
-    /// </summary>
-    public static List<Position> ObtenirPositionsPossibles(Plateau plateau, Tuile tuile)
-    {
-        var positionsPossibles = new List<Position>();
-
-        // Détermine les bornes dynamiques de la grille (min et max X et Y)
-        int minX = plateau.TuilesPlacees.Min(t => t.PositionX);
-        int maxX = plateau.TuilesPlacees.Max(t => t.PositionX);
-        int minY = plateau.TuilesPlacees.Min(t => t.PositionY);
-        int maxY = plateau.TuilesPlacees.Max(t => t.PositionY);
-
-        // Positions déjà jouées par l'adversaire avec une tuile plus faible
-        positionsPossibles.AddRange(
-            plateau.TuilesPlacees
-                .Where(t => t.Proprietaire.Nom != tuile.Proprietaire.Nom && t.Valeur < tuile.Valeur)
-                .Select(t => new Position(t)));
-
-        // Positions adjacentes à des tuiles jouées qui restent dans la grille
-        foreach (var t in plateau.TuilesPlacees)
-        {
-            var positionsAdjacentes = new List<Position>
-            {
-                new Position(t.PositionX - 1, t.PositionY),     // Gauche
-                new Position(t.PositionX + 1, t.PositionY),     // Droite
-                new Position(t.PositionX, t.PositionY - 1),     // Haut
-                new Position(t.PositionX, t.PositionY + 1),     // Bas
-                new Position(t.PositionX - 1, t.PositionY - 1), // Diagonale haut-gauche
-                new Position(t.PositionX + 1, t.PositionY - 1), // Diagonale haut-droite
-                new Position(t.PositionX - 1, t.PositionY + 1), // Diagonale bas-gauche
-                new Position(t.PositionX + 1, t.PositionY + 1)  // Diagonale bas-droite
-            };
-
-            // Ajoute les positions adjacentes si elles sont dans la grille 6x6 et respectent les règles
-            foreach (var pos in positionsAdjacentes)
-            {
-                tuile.PositionX = pos.X;
-                tuile.PositionY = pos.Y;
-
-                if (GestionnaireRegles.PeutPlacerTuile(plateau, tuile.Proprietaire, tuile))
-                {
-                    positionsPossibles.Add(pos);
-                }
-            }
-        }
-
-        // Ne tiens pas compte de ses propres positions déjà couvertes
-        // Ainsi que des positions en double
-        positionsPossibles = positionsPossibles
-            .Where(p => !plateau.TuilesPlacees
-                .Any(t => t.Proprietaire == tuile.Proprietaire
-                    && t.PositionX == p.X && t.PositionY == p.Y))
-            .Distinct()
-            .OrderBy(p => p.X)
-            .ThenBy(p => p.Y)
-            .ToList();
 
         return positionsPossibles;
     }
+
+    /// <summary>
+    /// Obtenir toutes les positions de tuile possibles pour une tuile donnée.
+    /// </summary>
+    public static List<Tuile> ObtenirPositionsPossibles(Plateau plateau, Joueur joueur, int valeurTuile)
+    {
+        // Récupère les positions déjà jouées par l'adversaire avec une tuile plus faible (superposer)
+        List<Tuile> positionsSuperposables = new List<Tuile>(
+            plateau.TuilesPlacees
+                .Where(t => t.Proprietaire.Nom != joueur.Nom && t.Valeur < valeurTuile)
+                .Select(t => new Tuile(joueur, valeurTuile, t.PositionX, t.PositionY)));
+
+        // Récupère les positions adjacentes à des tuiles jouées qui restent dans la grille (juxtaposer)
+        List<Tuile> positionsAdjacentes = new List<Tuile>(
+            plateau.TuilesPlacees.SelectMany(t =>
+                new List<Tuile>
+                {
+                    new Tuile(joueur, valeurTuile, t.PositionX - 1, t.PositionY),     // Gauche
+                    new Tuile(joueur, valeurTuile, t.PositionX + 1, t.PositionY),     // Droite
+                    new Tuile(joueur, valeurTuile, t.PositionX, t.PositionY - 1),     // Haut
+                    new Tuile(joueur, valeurTuile, t.PositionX, t.PositionY + 1),     // Bas
+                    new Tuile(joueur, valeurTuile, t.PositionX - 1, t.PositionY - 1), // Diagonale haut-gauche
+                    new Tuile(joueur, valeurTuile, t.PositionX + 1, t.PositionY - 1), // Diagonale haut-droite
+                    new Tuile(joueur, valeurTuile, t.PositionX - 1, t.PositionY + 1), // Diagonale bas-gauche
+                    new Tuile(joueur, valeurTuile, t.PositionX + 1, t.PositionY + 1)  // Diagonale bas-droite
+                }))
+            .Distinct()                         // Elimine les positions doublons
+            .Where(p => !plateau.TuilesPlacees  // Ne tiens pas compte de ses propres positions déjà couvertes
+                .Any(t => t.Proprietaire == joueur
+                    && t.PositionX == p.PositionX && t.PositionY == p.PositionY))
+            .ToList();
+
+        var positionsPossibles = new List<Tuile>();
+        positionsPossibles.AddRange(positionsSuperposables);
+        positionsPossibles.AddRange(positionsAdjacentes);
+
+        return positionsPossibles
+            .Where(t => PeutPlacerTuile(plateau, joueur, t)) // Uniquement les tuiles dans la grille et posable
+            .OrderBy(p => p.PositionX) // Tri par position X
+            .ThenBy(p => p.PositionY) // Puis pas position Y
+            .ToList();
+    }
+
+    public static bool SuperposeUneTuileAdverseExistante(Plateau plateau, Joueur joueur, Tuile tuile)
+    {
+        return plateau.TuilesPlacees
+            .Any(t => t.Proprietaire != joueur
+                && t.PositionX == tuile.PositionX
+                && t.PositionY == tuile.PositionY
+                && t.Valeur < tuile.Valeur);
+    }
+
+    public static int CompterTuilesAdjacentesDuJoueur(Plateau plateau, Joueur joueur, Tuile tuile)
+    {
+        // Définir les positions adjacentes (8 directions possibles autour d'une tuile)
+        var directions = new (int dx, int dy)[]
+        {
+            (-1, -1), (-1, 0), (-1, 1),
+            (0, -1),          (0, 1),
+            (1, -1),  (1, 0), (1, 1)
+        };
+
+        // Compter les tuiles du joueur autour de la tuile donnée
+        return plateau.TuilesPlacees
+            .Count(t => t.Proprietaire == joueur &&
+                directions.Any(d => t.PositionX == tuile.PositionX + d.dx && t.PositionY == tuile.PositionY + d.dy));
+    }
+
 }

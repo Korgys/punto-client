@@ -43,7 +43,7 @@ public class GestionnaireJeuLocal
             Nom = nomJoueur,
             EstUnOrdinateur = ordinateur,
             OrdreDeJeu = Jeu.Joueurs.Count + 1, // nombre de joueurs + 1
-            TuilesDansLaPioche = GestionnaireRegles.CreerTuilesPourJoueur(),
+            TuilesDansLaPioche = CreerTuilesPourJoueur(),
             TuilesDansLaMain = new List<int>()
         };
 
@@ -65,6 +65,8 @@ public class GestionnaireJeuLocal
                 Proprietaire = joueur
             };
             Jeu.Plateau.TuilesPlacees.Add(tuile);
+            joueur.TuilesDansLaMain.Remove(tuile.Valeur);
+            PiocherTuile(joueur);
             Console.WriteLine($"{joueur.Nom} a placé une tuile de valeur {tuile.Valeur} en position ({tuile.PositionX}, {tuile.PositionY}).");
         }
 
@@ -186,7 +188,7 @@ public class GestionnaireJeuLocal
             && joueur != null                                                   // Joueur dans la partie
             && !GestionnaireRegles.PeutPlacerTuile(Jeu.Plateau, joueur, tuile)) // Règles du jeu
         {
-            Console.WriteLine($"La tuile {tuile.Valeur} ne peut pas être placée en ({tuile.PositionX}, {tuile.PositionY}).");
+            Console.WriteLine($"La tuile {tuile?.Valeur} ne peut pas être placée en ({tuile?.PositionX}, {tuile?.PositionY}).");
 
             // Gestion des penalités
             joueur.Penalite++;
@@ -306,5 +308,31 @@ public class GestionnaireJeuLocal
         joueur.TuilesDansLaMain.Add(tuilePiochee);
         // Retire la tuile de la pioche
         joueur.TuilesDansLaPioche = joueur.TuilesDansLaPioche.Skip(1).ToList();
+    }
+
+    /// <summary>
+    /// Permet de créer les tuiles dans la pioche du joueur. 
+    /// Les tuiles sont mélangées au hasard.
+    /// </summary>
+    /// <returns></returns>
+    public static List<int> CreerTuilesPourJoueur()
+    {
+        // Mélange des tuiles
+        var tuiles = new List<int>
+        {
+            1, 1,
+            2, 2,
+            3, 3,
+            4, 4,
+            5, 5,
+            6, 6,
+            7, 7,
+            8, 8,
+            9, 9
+        };
+
+        // Mélange des tuiles pour plus d'aléatoire
+        var aleatoire = new Random();
+        return tuiles.OrderBy(t => aleatoire.Next()).ToList();
     }
 }
