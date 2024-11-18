@@ -77,8 +77,8 @@ public class GestionnaireStrategieDefensifV2 : IGestionnaireStrategie
                     return new Tuile
                     {
                         Valeur = valeurMaxTuileDansLaMain,
-                        PositionX = plusGrandAlignement[1].PositionX,
-                        PositionY = plusGrandAlignement[1].PositionY,
+                        PositionX = plusGrandAlignement[2].PositionX,
+                        PositionY = plusGrandAlignement[2].PositionY,
                         Proprietaire = joueur
                     };
                 }
