@@ -24,7 +24,8 @@ public class GestionnaireJeuEnLigne
 
         // Configuration de la connexion SignalR
         _connection = new HubConnectionBuilder()
-            .WithUrl("http://localhost:5000/punto")
+            //.WithUrl("http://localhost:5000/punto")
+            .WithUrl("ws://0.TCP.EU.NGROK.IO:10002/punto")
             .Build();
 
         // Gestion des événements envoyés par le serveur
@@ -40,7 +41,9 @@ public class GestionnaireJeuEnLigne
 
         _connection.On<string>("CommencerTour", (joueur) =>
         {
-            Console.WriteLine($"C'est au tour de {joueur} de jouer.");
+            var indiceJoueur = _plateau.TuilesPlacees.Select(t => t.Proprietaire).Distinct().FirstOrDefault(p => p.Nom == joueur);
+            if (indiceJoueur == null) Console.WriteLine($"C'est au tour de {joueur} de jouer.");
+            else AfficherMessageDeJoueur(indiceJoueur.OrdreDeJeu, $"C'est au tour de {joueur} de jouer.");
             _auTourDeJoueur = joueur;
         });
 
@@ -205,7 +208,6 @@ public class GestionnaireJeuEnLigne
             return false;
         }
     }
-
 
     public async Task<Plateau> ObtenirPlateau()
     {
