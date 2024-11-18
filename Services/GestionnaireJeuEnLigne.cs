@@ -27,8 +27,6 @@ public class GestionnaireJeuEnLigne
             .WithUrl("http://localhost:5000/punto")
             .Build();
 
-        Console.WriteLine("Connecté !");
-
         // Gestion des événements envoyés par le serveur
         _connection.On<string>("RejoindrePartie", (joueur) =>
         {
@@ -102,12 +100,16 @@ public class GestionnaireJeuEnLigne
             return Task.CompletedTask;
         };
 
-        _connection.Reconnected += (connectionId) =>
+        _connection.Reconnected += async (connectionId) =>
         {
             Console.WriteLine($"Reconnexion réussie. ConnectionId : {connectionId}");
-            return Task.CompletedTask;
-        };
 
+            if (_joueur != null)
+            {
+                // Réassocie le joueur existant
+                await RejoindrePartie(_joueur.Nom);
+            }
+        };
     }
 
     public async Task Connecter()
@@ -166,6 +168,12 @@ public class GestionnaireJeuEnLigne
                 Console.WriteLine($"Tentative de reconnexion {tentative}/{maxTentatives}...");
                 await _connection.StartAsync();
                 Console.WriteLine("Reconnexion réussie.");
+
+                // Réassocier le joueur existant
+                if (_joueur != null)
+                {
+                    await RejoindrePartie(_joueur.Nom);
+                }
                 return;
             }
             catch (Exception ex)
