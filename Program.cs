@@ -160,7 +160,7 @@ public class Program
     public static async Task JouerEnLigne()
     {
         var gestionnaireJeuEnLigne = new GestionnaireJeuEnLigne();
-        var strategie = new GestionnaireStrategieAleatoire();
+        var strategie = new GestionnaireStrategieAgressifV2();
         
         // Connexion au serveur
         await gestionnaireJeuEnLigne.Connecter();
@@ -200,8 +200,12 @@ public class Program
             Plateau plateau = gestionnaireJeuEnLigne._plateau;
 
             // Récupère les tuiles en main
-            joueur.TuilesDansLaMain = gestionnaireJeuEnLigne._tuilesEnMain;
-
+            do
+            {
+                await gestionnaireJeuEnLigne.ObtenirMainJoueur();
+                joueur.TuilesDansLaMain = gestionnaireJeuEnLigne._tuilesEnMain;
+            } while (joueur.TuilesDansLaMain == null);
+            
             // Choix des informations de la tuile
             Tuile tuile = strategie.ObtenirProchainCoup(plateau, joueur);
 
