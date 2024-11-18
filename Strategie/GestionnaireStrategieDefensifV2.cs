@@ -6,7 +6,7 @@ namespace punto_client.Strategie;
 /// <summary>
 /// Cherche à empêcher l'adversaire de gagner avant de se concentrer sur son propre jeu.
 /// </summary>
-public class GestionnaireStrategieDefensif : IGestionnaireStrategie
+public class GestionnaireStrategieDefensifV2 : IGestionnaireStrategie
 {
     /// <summary>
     /// Cherche la tuile pour empêcher l'adversaire de gagner ou à défaut, cherche à aligner ses tuiles.
@@ -81,6 +81,54 @@ public class GestionnaireStrategieDefensif : IGestionnaireStrategie
                         PositionY = plusGrandAlignement[1].PositionY,
                         Proprietaire = joueur
                     };
+                }
+                else // Cas où on peut "bloquer" en mettant sur la continuité de l'alignement
+                {
+                    // Obtient les tuiles dans la continuité de l'alignement
+                    var tuilesContinuantAlignement = GestionnaireRegles.ObtenirTuilesContinuantAlignement(plateau, plusGrandAlignement);
+                    if (tuilesContinuantAlignement.Count == 2)
+                    {
+                        if (tuilesContinuantAlignement[0].Valeur < valeurMaxTuileDansLaMain)
+                        {
+                            var tuile = new Tuile
+                            {
+                                Valeur = valeurMaxTuileDansLaMain,
+                                PositionX = tuilesContinuantAlignement[0].PositionX,
+                                PositionY = tuilesContinuantAlignement[0].PositionY,
+                                Proprietaire = joueur
+                            };
+                            if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, tuile))
+                            {
+                                return new Tuile
+                                {
+                                    Valeur = valeurMaxTuileDansLaMain,
+                                    PositionX = tuilesContinuantAlignement[0].PositionX,
+                                    PositionY = tuilesContinuantAlignement[0].PositionY,
+                                    Proprietaire = joueur
+                                };
+                            }
+                        }
+                        else if (tuilesContinuantAlignement[1].Valeur < valeurMaxTuileDansLaMain)
+                        {
+                            var tuile = new Tuile
+                            {
+                                Valeur = valeurMaxTuileDansLaMain,
+                                PositionX = tuilesContinuantAlignement[1].PositionX,
+                                PositionY = tuilesContinuantAlignement[1].PositionY,
+                                Proprietaire = joueur
+                            };
+                            if (GestionnaireRegles.PeutPlacerTuile(plateau, joueur, tuile))
+                            {
+                                return new Tuile
+                                {
+                                    Valeur = valeurMaxTuileDansLaMain,
+                                    PositionX = tuilesContinuantAlignement[1].PositionX,
+                                    PositionY = tuilesContinuantAlignement[1].PositionY,
+                                    Proprietaire = joueur
+                                };
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -250,4 +250,147 @@ public class GestionnaireRegles
                 directions.Any(d => t.PositionX == tuile.PositionX + d.dx && t.PositionY == tuile.PositionY + d.dy));
     }
 
+    /// <summary>
+    /// Retourne le plus grand alignement de tuiles pour un joueur sur un plateau.
+    /// </summary>
+    /// <param name="plateau">Le plateau de jeu.</param>
+    /// <param name="joueur">Le joueur dont on cherche l'alignement.</param>
+    /// <returns>Une liste des tuiles correspondant au plus grand alignement.</returns>
+    public static List<Tuile> ObtenirPlusGrandAlignement(Plateau plateau, Joueur joueur)
+    {
+        var tuilesJoueur = plateau.TuilesPlacees
+            .Where(t => t.Proprietaire.Nom == joueur.Nom)
+            .ToList();
+
+        if (!tuilesJoueur.Any())
+        {
+            return new List<Tuile>(); // Aucun alignement possible si le joueur n'a pas de tuiles
+        }
+
+        List<Tuile> plusGrandAlignement = new();
+        foreach (var tuile in tuilesJoueur)
+        {
+            // Vérifier chaque direction
+            var alignementHorizontal = ObtenirAlignementDansUneDirection(tuilesJoueur, tuile, 1, 0);
+            var alignementVertical = ObtenirAlignementDansUneDirection(tuilesJoueur, tuile, 0, 1);
+            var alignementDiagonal1 = ObtenirAlignementDansUneDirection(tuilesJoueur, tuile, 1, 1);
+            var alignementDiagonal2 = ObtenirAlignementDansUneDirection(tuilesJoueur, tuile, 1, -1);
+
+            // Trouver le plus grand alignement parmi les directions
+            var alignementsPossibles = new List<List<Tuile>>
+            {
+                alignementHorizontal,
+                alignementVertical,
+                alignementDiagonal1,
+                alignementDiagonal2
+            };
+
+            var plusLongAlignementLocal = alignementsPossibles.OrderByDescending(a => a.Count).FirstOrDefault();
+
+            if (plusLongAlignementLocal.Count > plusGrandAlignement.Count)
+            {
+                plusGrandAlignement = plusLongAlignementLocal;
+            }
+        }
+
+        return plusGrandAlignement;
+    }
+
+    /// <summary>
+    /// Obtient un alignement de tuiles dans une direction donnée.
+    /// </summary>
+    /// <param name="tuiles">Les tuiles du joueur.</param>
+    /// <param name="tuileDeDepart">La tuile de départ.</param>
+    /// <param name="deltaX">Incrément pour la direction X.</param>
+    /// <param name="deltaY">Incrément pour la direction Y.</param>
+    /// <returns>Une liste des tuiles alignées.</returns>
+    private static List<Tuile> ObtenirAlignementDansUneDirection(List<Tuile> tuiles, Tuile tuileDeDepart, int deltaX, int deltaY)
+    {
+        var alignement = new List<Tuile> { tuileDeDepart };
+
+        // Vérifier dans la direction positive
+        int x = tuileDeDepart.PositionX + deltaX;
+        int y = tuileDeDepart.PositionY + deltaY;
+
+        while (tuiles.Any(t => t.PositionX == x && t.PositionY == y))
+        {
+            alignement.Add(tuiles.First(t => t.PositionX == x && t.PositionY == y));
+            x += deltaX;
+            y += deltaY;
+        }
+
+        // Vérifier dans la direction négative
+        x = tuileDeDepart.PositionX - deltaX;
+        y = tuileDeDepart.PositionY - deltaY;
+
+        while (tuiles.Any(t => t.PositionX == x && t.PositionY == y))
+        {
+            alignement.Add(tuiles.First(t => t.PositionX == x && t.PositionY == y));
+            x -= deltaX;
+            y -= deltaY;
+        }
+
+        return alignement;
+    }
+
+    /// <summary>
+    /// Retourne les deux tuiles qui continueraient l'alignement obtenu, si possible.
+    /// </summary>
+    /// <param name="plateau">Le plateau de jeu.</param>
+    /// <param name="alignement">L'alignement actuel de tuiles.</param>
+    /// <returns>Une liste contenant jusqu'à deux tuiles qui pourraient continuer l'alignement.</returns>
+    public static List<Tuile> ObtenirTuilesContinuantAlignement(Plateau plateau, List<Tuile> alignement)
+    {
+        if (alignement == null || alignement.Count < 2)
+        {
+            return new List<Tuile>(); // Pas d'alignement suffisant pour être prolongé
+        }
+
+        var tuilesContinuant = new List<Tuile>();
+        var toutesTuiles = plateau.TuilesPlacees;
+
+        // Calcul de la direction de l'alignement (deltaX, deltaY)
+        var tuileDebut = alignement.First();
+        var tuileFin = alignement.Last();
+        int deltaX = tuileFin.PositionX - tuileDebut.PositionX;
+        int deltaY = tuileFin.PositionY - tuileDebut.PositionY;
+
+        // Normalisation du delta pour représenter la direction unitaire
+        deltaX = deltaX == 0 ? 0 : deltaX / Math.Abs(deltaX);
+        deltaY = deltaY == 0 ? 0 : deltaY / Math.Abs(deltaY);
+
+        // Vérifie après la fin de l'alignement
+        var prochainePositionFinX = tuileFin.PositionX + deltaX;
+        var prochainePositionFinY = tuileFin.PositionY + deltaY;
+        if (!toutesTuiles.Any(t => t.PositionX == prochainePositionFinX && t.PositionY == prochainePositionFinY))
+        {
+            var tuileContinuantExistante = plateau.TuilesPlacees.FirstOrDefault(t => t.PositionX == prochainePositionFinX && t.PositionY == prochainePositionFinY);
+            if (tuileContinuantExistante != null) // Une tuile est déjà placée
+            {
+                tuilesContinuant.Add(tuileContinuantExistante);
+            }
+            else
+            {
+                tuilesContinuant.Add(new Tuile
+                {
+                    PositionX = prochainePositionFinX,
+                    PositionY = prochainePositionFinY
+                });
+            }
+        }
+
+        // Vérifie avant le début de l'alignement
+        var prochainePositionDebutX = tuileDebut.PositionX - deltaX;
+        var prochainePositionDebutY = tuileDebut.PositionY - deltaY;
+        if (!toutesTuiles.Any(t => t.PositionX == prochainePositionDebutX && t.PositionY == prochainePositionDebutY))
+        {
+            tuilesContinuant.Add(new Tuile
+            {
+                PositionX = prochainePositionDebutX,
+                PositionY = prochainePositionDebutY
+            });
+        }
+
+        return tuilesContinuant;
+    }
 }
