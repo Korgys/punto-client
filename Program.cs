@@ -160,7 +160,7 @@ public class Program
     public static async Task JouerEnLigne()
     {
         var gestionnaireJeuEnLigne = new GestionnaireJeuEnLigne();
-        var strategie = new GestionnaireStrategieAgressifV2();
+        var strategie = new GestionnaireStrategieAleatoire();
         
         // Connexion au serveur
         await gestionnaireJeuEnLigne.Connecter();
