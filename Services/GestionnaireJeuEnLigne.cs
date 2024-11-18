@@ -20,10 +20,14 @@ public class GestionnaireJeuEnLigne
 
     public GestionnaireJeuEnLigne()
     {
+        Console.WriteLine("Tentative de connexion en cours ...");
+
         // Configuration de la connexion SignalR
         _connection = new HubConnectionBuilder()
             .WithUrl("http://localhost:5000/punto")
             .Build();
+
+        Console.WriteLine("Connecté !");
 
         // Gestion des événements envoyés par le serveur
         _connection.On<string>("RejoindrePartie", (joueur) =>
@@ -85,6 +89,25 @@ public class GestionnaireJeuEnLigne
             Console.WriteLine($"La partie est terminée. Le vainqueur est {vainqueur}.");
             _etatJeu = EtatJeu.Termine.ToString();
         });
+
+        _connection.Closed += async (error) =>
+        {
+            Console.WriteLine($"Connexion fermée : {error?.Message}");
+            await Reconnecter();
+        };
+
+        _connection.Reconnecting += (error) =>
+        {
+            Console.WriteLine($"Reconnexion en cours : {error?.Message}");
+            return Task.CompletedTask;
+        };
+
+        _connection.Reconnected += (connectionId) =>
+        {
+            Console.WriteLine($"Reconnexion réussie. ConnectionId : {connectionId}");
+            return Task.CompletedTask;
+        };
+
     }
 
     public async Task Connecter()
@@ -127,6 +150,35 @@ public class GestionnaireJeuEnLigne
     public async Task Deconnecter()
     {
         await _connection.StopAsync();
+    }
+
+    private async Task Reconnecter()
+    {
+        int tentative = 0;
+        int maxTentatives = 5;
+        int delaiEntreTentatives = 5000; // 5 secondes
+
+        while (tentative < maxTentatives)
+        {
+            tentative++;
+            try
+            {
+                Console.WriteLine($"Tentative de reconnexion {tentative}/{maxTentatives}...");
+                await _connection.StartAsync();
+                Console.WriteLine("Reconnexion réussie.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Échec de la reconnexion : {ex.Message}");
+                if (tentative == maxTentatives)
+                {
+                    Console.WriteLine("Nombre maximal de tentatives atteint. Reconnexion abandonnée.");
+                    break;
+                }
+            }
+            await Task.Delay(delaiEntreTentatives);
+        }
     }
 
     public async Task<bool> ObtenirEtatJeu()
